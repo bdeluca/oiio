@@ -293,6 +293,35 @@ if (NOT OIIO_NAMESPACE)
 endif ()
 message(STATUS "Setting Namespace to: ${OIIO_NAMESPACE}")
 
+if (BUILDSTATIC)
+    message (STATUS "Building static libraries")
+    add_definitions(-DOIIO_STATIC_BUILD=1)
+    if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+        # On Linux, the lack of -fPIC when building static libraries seems
+        # incompatible with the dynamic library needed for the Python bindings.
+        set (USE_PYTHON OFF)
+        set (USE_PYTHON3 OFF)
+    endif ()
+    if (WIN32)
+        set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+        set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+    endif ()
+endif()
+
+# Use .a files if LINKSTATIC is enabled
+if (LINKSTATIC)
+    set (_orig_link_suffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    message (STATUS "Statically linking external libraries")
+    if (WIN32)
+        set (CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    else ()
+        # set (CMAKE_FIND_LIBRARY_SUFFIXES .a)
+        set (CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    endif ()
+    add_definitions (-DBoost_USE_STATIC_LIBS=1)
+    set (Boost_USE_STATIC_LIBS 1)
+endif ()
+
 set (CMAKE_MODULE_PATH
      "${PROJECT_SOURCE_DIR}/src/cmake/modules"
      "${PROJECT_SOURCE_DIR}/src/cmake")
@@ -388,6 +417,7 @@ endif ()
 
 
 if (MSVC)
+    add_definitions (/W1)
     add_definitions (-D_CRT_SECURE_NO_DEPRECATE)
     add_definitions (-D_CRT_SECURE_NO_WARNINGS)
     add_definitions (-D_CRT_NONSTDC_NO_WARNINGS)
@@ -398,9 +428,6 @@ if (MSVC)
         add_definitions (-DBoost_USE_STATIC_LIBS=1)
     else ()
         add_definitions (-DBOOST_ALL_DYN_LINK)
-    endif ()
-    if (BUILDSTATIC)
-         add_definitions(-DOIIO_STATIC_BUILD=1)
     endif ()
 endif (MSVC)
 
